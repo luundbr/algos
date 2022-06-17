@@ -21,8 +21,11 @@ class Linear {
     this.weights = nj.array(this.weights)
   }
 
+  pass_grad = 0
+
   pass(x) {
     x = nj.array(x)
+    this.pass_grad = x
     const y = x.dot(this.weights.T)
     return y
   }
@@ -36,14 +39,12 @@ const relu_grad = xa => nj.array(xa.tolist().map(x => x > 0 ? 1 : 0))
 const SE = (xa, tg) => xa.tolist().map(x => 0.5 * ((tg - x)**2))
   .reduce((a, c) => a + c, 0)
 
-// const MSE_w = (xa, tg) => 2 * (xa.map(x => (x - tg)**2)
-//  .reduce((a, c) => a + c, 0)) / xa.length
 
-
-const MSE = (xa, tg) => 1/xa.tolist().length * (xa.tolist().map((x) => (x - tg)**2)
+// torch does 1/N instead of 1/2N
+const MSE = (xa, tg) => 1/(2*xa.length) * (xa.map((x, i) => (tg[i] - x)**2)
   .reduce((a, c) => a + c, 0))
 
-const MSE_grad = (xa, tg) => 2/xa.tolist().length * (xa.tolist().map((x) => x - tg)
+const MSE_grad = (xa, tg, xa_init) => -1/(xa.length) * (xa.map((x, i) => xa_init[i]*(tg[i] - x))
   .reduce((a, c) => a + c, 0))
 
 
@@ -66,16 +67,24 @@ class NN {
 
 const nn = new NN()
 
-const EPOCHS = 3
+const EPOCHS = 1
 
 for (let i = 0; i < EPOCHS; i++) {
   const data = [0.3, 0.5]
-  const label = [0.7, 0.4]
+  const label = [0.7, 0.9]
 
   const out = nn.forward(data)
+  const loss = MSE(out.tolist(), label)
 
-  const loss = MSE(out, label)
+  const outXinit = nn.output.pass_grad.tolist()
+  console.log('X init', outXinit)
 
-  // console.log('out', out)
-  // console.log('loss', loss)
+  const loss_grad = MSE_grad(out.tolist(), label, outXinit)
+
+  console.log('out', out.tolist())
+  console.log('label', label)
+  console.log('loss', loss)
+  console.log('loss grad', loss_grad)
+  
 }
+
