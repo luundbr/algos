@@ -1,4 +1,5 @@
 const nj = require('numjs')
+const m = require('mathjs')
 
 class Linear {
   weights = []
@@ -19,14 +20,18 @@ class Linear {
     }
 
     this.weights = nj.array(this.weights)
+    console.log('W', this.weights.tolist())
   }
 
-  pass_grad = 0
+  pass_x = 0
+  pass_y = 0
+  grad = 0
 
   pass(x) {
     x = nj.array(x)
-    this.pass_grad = x
+    this.pass_x = x
     const y = x.dot(this.weights.T)
+    this.pass_y = y
     return y
   }
 
@@ -38,30 +43,38 @@ const relu_grad = xa => nj.array(xa.tolist().map(x => x > 0 ? 1 : 0))
 
 const SE = (xa, tg) => xa.tolist().map(x => 0.5 * ((tg - x)**2))
   .reduce((a, c) => a + c, 0)
+const dumb_MSE = (xa, tg) => 1/(xa.length) * (xa.map((x, i) => (tg[i] - x)**2)
+  .reduce((a, c) => a + c, 0))
+const dumb_MSE_grad = (xa, tg, xa_init) => -1/(xa.length) * (xa.map((x, i) => xa_init[i]*(tg[i] - x))
+  .reduce((a, c) => a + c, 0))
 
 
 // torch does 1/N instead of 1/2N
-const MSE = (xa, tg) => 1/(2*xa.length) * (xa.map((x, i) => (tg[i] - x)**2)
-  .reduce((a, c) => a + c, 0))
-
-const MSE_grad = (xa, tg, xa_init) => -1/(xa.length) * (xa.map((x, i) => xa_init[i]*(tg[i] - x))
-  .reduce((a, c) => a + c, 0))
+const MSE = (xa, tg) => tg.subtract(xa).pow(2).sum() * (1/(xa.shape[0]))
 
 
 class NN {
   constructor() {
     this.input = new Linear(2, 2)
-    this.hidden = new Linear(2, 2)
+    // this.hidden = new Linear(1, 1)
     this.output = new Linear(2, 2)
   }
 
   forward(x) {
     x = this.input.pass(x)
     x = relu(x)
-    x = this.hidden.pass(x)
-    x = relu(x)
+    //console.log('FIRST LAYER RELU', x.tolist())
+    //x = this.hidden.pass(x)
+    //console.log('SECOND LAYER', x.tolist())
+    //x = relu(x)
+    //console.log('SECOND LAYER RELU', x.tolist())
     x = this.output.pass(x)
+    console.log('LAST LAYER', x.tolist())
     return x
+  }
+
+  backward() {
+
   }
 }
 
@@ -69,22 +82,63 @@ const nn = new NN()
 
 const EPOCHS = 1
 
+const mse_l2_grad = (l1_w, l2_w, x1, y, l_o) => {
+  // l2 grad -2*l1_w*x1*(-l1_w*l2_w*x1 + y)/N
+
+  const p2 = (nj.negative(l1_w).dot(l2_w.T).T.dot(x1).add(y))
+  const sd1 = l_o.shape[0] - p2.shape[0]
+  if (sd1) { // todo zeros
+    l_o = nj.concatenate(l_o, nj.zeros(sd1))
+  }
+  const m1 = l_o.dot(p2)
+  const m2 = m1.dot(-2)
+  
+  const d1 = m2.divide(y.shape[0])
+
+  return d1.get(0)
+}
+
+const mse_l1_grad = (l1_w, l2_w, x1, y, l_o) => {
+  // l1 grad -2*l2_w*x1*(-l1_w*l2_w*x1 + y)/N
+
+  const p2 = (nj.negative(l1_w).dot(l2_w.T).T.dot(x1).add(y))
+  const sd1 = l_o.shape[0] - p2.shape[0]
+  if (sd1) { // todo zeros
+    l_o = nj.concatenate(l_o, nj.zeros(sd1))
+  }
+  const m1 = l_o.dot(p2)
+  const m2 = m1.dot(-2)
+  
+  const d1 = m2.divide(y.shape[0])
+
+  return d1.get(0)
+}
+
+const mse_l1_grad = (l1_w,l2_w,x1,y) => ((l2_w.dot(x1).dot((-l1_w.dot(l2_w).dot(x1).add(y)))).divide(2)).dot(-2)
+
 for (let i = 0; i < EPOCHS; i++) {
   const data = [0.3, 0.5]
   const label = [0.7, 0.9]
 
   const out = nn.forward(data)
-  const loss = MSE(out.tolist(), label)
+  const loss = MSE(out, nj.array(label))
 
-  const outXinit = nn.output.pass_grad.tolist()
-  console.log('X init', outXinit)
+  console.log('----------------')
 
-  const loss_grad = MSE_grad(out.tolist(), label, outXinit)
+  console.log('inp w', nn.input.weights.tolist())
+  console.log('FIRST PASS Y', nn.input.pass_y.tolist())
+  console.log('out w', nn.output.weights.tolist())
+  console.log('SECOND PASS Y', nn.output.pass_y.tolist())
+  console.log('data', data)
+  const l2_grad = mse_l2_grad(nn.input.weights, nn.output.weights, nj.array(data), nj.array(label), nn.output.pass_y)
+  console.log(l2_grad)
 
+  console.log('+++++++++++++++')
   console.log('out', out.tolist())
   console.log('label', label)
   console.log('loss', loss)
-  console.log('loss grad', loss_grad)
-  
+  console.log('loss grad', l2_grad)
+  console.log('---------------')
+
 }
 
