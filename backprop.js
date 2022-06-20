@@ -2,11 +2,31 @@ const nj = require('numjs')
 const m = require('mathjs')
 
 const relu = x => {
+  const d2 = x.shape.length > 1 
+
   if (x.tolist) {
     x = x.tolist()
   }
 
-  return nj.array(x.map(e => e > 0 ? e : 0))
+  if (d2) {
+    return nj.array(x.map(ei => ei.map(ej => ej > 0 ? ej : 0)))
+  } else {
+    return nj.array(x.map(e => e > 0 ? 1 : 0))
+  }
+}
+
+const relu_dx = x => {
+  const d2 = x.shape.length > 1 
+
+  if (x.tolist) {
+    x = x.tolist()
+  }
+
+  if (d2) {
+    return nj.array(x.map(ei => ei.map(ej => ej > 0 ? 1 : 0)))
+  } else {
+    return nj.array(x.map(e => e > 0 ? 1 : 0))
+  }
 }
 
 const getWeights = (inN, outN) => {
@@ -37,18 +57,28 @@ const MSE = squared_error => {
   return mse
 }
 
+const MSE_dx = (x, y, x_init) => {
+  const s = -1/x.shape[0] * 2
+
+  const di = y.subtract(x)
+  const sd = di.dot(x_init)
+
+  const grad = sd.dot(s)
+
+  return grad.get(0)
+}
 
 let l1 = nj.array([[-0.6279, -0.4686], [-0.0907, 0.6363]]) // getWeights(2, 2)
-let l2 = nj.array([[0.731, 0.6026], [-0.1873, -0.6037]]) // getWeights(2, 2)
+let l2 = nj.array([[0.731, 0.6026], [-0.1873, -0.6037]])  // getWeights(2, 2) 
 
-const EPOCHS = 100
-const lr = 0.001
+const EPOCHS = 1
+const lr = 0.01
 
 const losses = []
 
 for (let i = 0; i < EPOCHS; i++) {
   const x = nj.array([0.3, 0.5])
-  const y = nj.array([0.7, 0.9])
+  const y = nj.array([1, 0])
 
   console.log('data', x.tolist())
   console.log('labels', y.tolist())
@@ -56,56 +86,68 @@ for (let i = 0; i < EPOCHS; i++) {
   // forward
 
   const l1_o = x.dot(l1.T)
+  // const l1_o_relu = relu(l1_o)
+  // const l2_o = l1_o_relu.dot(l2.T)
+  const l2_o = l1_o.dot(l2.T)
+  const se = SE(l2_o, y)
+  const loss = MSE(se)
+
+  losses.push(loss)
 
   console.log('L1', l1.tolist())
   console.log('L1 out', l1_o.tolist())
-
-  const l1_o_relu = relu(l1_o)
-
-  console.log('L1 out relu', l1_o_relu.tolist())
-
-  const l2_o = l1_o_relu.dot(l2.T)
-
+  // console.log('L1 out relu', l1_o_relu.tolist())
   console.log('L2', l2.tolist())
   console.log('L2 out', l2_o.tolist())
-
-  const se = SE(l2_o, y)
-  const loss = MSE(se)
-  losses.push(loss)
-
   console.log('loss', loss)
 
   // backward
   console.log('---------------')
 
-  console.log('out shape', l2_o.shape)
-  console.log('y shape', y.shape)
-  const l2_o_grad = SE_dx(l2_o, y)
+  // const l2_o_loss_grad = SE_dx(l2_o, y)
+  
+  const l2_o_grad_m = MSE_dx(l2_o, y, l1_o)
+  const l1_o_grad_m = MSE_dx(l2_o, y, x.dot(l2.T))
+
+  const l2_o_grad = l2.multiply(l2_o_grad_m)
+  const l1_o_grad = l1.multiply(l1_o_grad_m)
 
   console.log('l2 grad', l2_o_grad.tolist())
-
-  const l1_o_relu_grad = l2_o_grad.dot(l1.T)
-
-  console.log('l1 relu grad', l1_o_relu_grad.tolist())
-
-  const l1_o_grad = l1_o_relu_grad.dot(l1.T)
-
   console.log('l1 grad', l1_o_grad.tolist())
+  // console.log('l1 relu grad', l1_o_relu_grad.tolist())
 
   // sgd
   console.log('+++++++++++++++')
 
-  const l1_o_grad_new = nj.array([[0, 0], l1_o_grad.tolist()])
-  console.log(l1_o_grad_new)
-  const l2_o_grad_new = nj.array([[0, l2_o_grad.tolist()[0]], [0, l2_o_grad.tolist()[1]]])
-  console.log(l2_o_grad_new)
-
-  l1 = l1.subtract(l1_o_grad_new.multiply(lr))
-  l2 = l2.subtract(l2_o_grad_new.multiply(lr))
+  l1 = l1.subtract(l1_o_grad.multiply(lr))
+  l2 = l2.subtract(l2_o_grad.multiply(lr))
 }
 
 console.log(losses)
+console.log(losses[losses.length-1])
 
+
+/*
+
+
+// l1w = 0.6279
+// l2w = 0.7310
+// l1o = 0.1884 -> 0.6279 * 0.3
+// l2o = 0.1377
+
+// l1w = 0.7310
+// l2w = 0.6279
+// l1o = 0.2193
+// l2o = 0.1377
+
+
+const test_dx_l2 = MSE_dx(nj.array([0.1377]), nj.array([1]), nj.array([0.1884]))
+console.log('TEST dx L2', test_dx_l2)
+const test_dx_l1 = MSE_dx(nj.array([0.1337]), nj.array([1]), nj.array([0.2193]))
+console.log('TEST dx L1', test_dx_l1)
+console.log('\n\n')
+ *
+*/
 
 /*
 class Linear {
