@@ -37,48 +37,74 @@ const MSE = squared_error => {
   return mse
 }
 
-const x = nj.array([0.3, 0.5])
-const y = nj.array([0.7, 0.9])
 
-console.log('data', x.tolist())
-console.log('labels', y.tolist())
+let l1 = nj.array([[-0.6279, -0.4686], [-0.0907, 0.6363]]) // getWeights(2, 2)
+let l2 = nj.array([[0.731, 0.6026], [-0.1873, -0.6037]]) // getWeights(2, 2)
 
-// forward
-const l1 = getWeights(2, 2).multiply(15)
-const l2 = getWeights(2, 2)
+const EPOCHS = 100
+const lr = 0.001
 
-const l1_o = x.dot(l1.T)
+const losses = []
 
-console.log('L1', l1.tolist())
-console.log('L1 out', l1_o.tolist())
+for (let i = 0; i < EPOCHS; i++) {
+  const x = nj.array([0.3, 0.5])
+  const y = nj.array([0.7, 0.9])
 
-const l1_o_relu = relu(l1_o)
+  console.log('data', x.tolist())
+  console.log('labels', y.tolist())
 
-console.log('L1 out relu', l1_o_relu.tolist())
+  // forward
 
-const l2_o = l1_o_relu.dot(l2)
+  const l1_o = x.dot(l1.T)
 
-console.log('L2', l2.tolist())
-console.log('L2 out', l2_o.tolist())
+  console.log('L1', l1.tolist())
+  console.log('L1 out', l1_o.tolist())
 
-const loss = MSE(l2_o, y)
+  const l1_o_relu = relu(l1_o)
 
-console.log('loss', loss)
+  console.log('L1 out relu', l1_o_relu.tolist())
 
-// backward
-console.log('---------------')
+  const l2_o = l1_o_relu.dot(l2.T)
 
-const l2_o_grad = SE_dx(l2_o, y)
+  console.log('L2', l2.tolist())
+  console.log('L2 out', l2_o.tolist())
 
-console.log('l2 grad', l2_o_grad.tolist())
+  const se = SE(l2_o, y)
+  const loss = MSE(se)
+  losses.push(loss)
 
-const l1_o_relu_grad = l2_o_grad.dot(l1.T)
+  console.log('loss', loss)
 
-console.log('l1 relu grad', l1_o_relu_grad.tolist())
+  // backward
+  console.log('---------------')
 
-const l1_o_grad = l1_o_relu_grad.dot(l1.T)
+  console.log('out shape', l2_o.shape)
+  console.log('y shape', y.shape)
+  const l2_o_grad = SE_dx(l2_o, y)
 
-console.log('l1 grad', l1_o_grad.tolist())
+  console.log('l2 grad', l2_o_grad.tolist())
+
+  const l1_o_relu_grad = l2_o_grad.dot(l1.T)
+
+  console.log('l1 relu grad', l1_o_relu_grad.tolist())
+
+  const l1_o_grad = l1_o_relu_grad.dot(l1.T)
+
+  console.log('l1 grad', l1_o_grad.tolist())
+
+  // sgd
+  console.log('+++++++++++++++')
+
+  const l1_o_grad_new = nj.array([[0, 0], l1_o_grad.tolist()])
+  console.log(l1_o_grad_new)
+  const l2_o_grad_new = nj.array([[0, l2_o_grad.tolist()[0]], [0, l2_o_grad.tolist()[1]]])
+  console.log(l2_o_grad_new)
+
+  l1 = l1.subtract(l1_o_grad_new.multiply(lr))
+  l2 = l2.subtract(l2_o_grad_new.multiply(lr))
+}
+
+console.log(losses)
 
 
 /*
