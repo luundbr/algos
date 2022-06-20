@@ -1,6 +1,87 @@
 const nj = require('numjs')
 const m = require('mathjs')
 
+const relu = x => {
+  if (x.tolist) {
+    x = x.tolist()
+  }
+
+  return nj.array(x.map(e => e > 0 ? e : 0))
+}
+
+const getWeights = (inN, outN) => {
+  const weights = []
+  for (let j = 0; j < outN; j++) {
+    weights.push([])
+    for (let i = 0; i < inN; i++) {
+      weights[weights.length - 1].push(
+        parseFloat((Math.random() * 1.8 - 0.9).toFixed(4))
+      )
+    }
+  }
+
+  return nj.array(weights)
+}
+
+const SE = (x, y) => {
+  return (y.subtract(x).pow(2))
+}
+
+const SE_dx = (x, y) => {
+  return (x.multiply(2).subtract((y.multiply(2))))
+}
+
+const MSE = squared_error => {
+  const sum = squared_error.sum()
+  const mse = sum / squared_error.shape[0]
+  return mse
+}
+
+const x = nj.array([0.3, 0.5])
+const y = nj.array([0.7, 0.9])
+
+console.log('data', x.tolist())
+console.log('labels', y.tolist())
+
+// forward
+const l1 = getWeights(2, 2).multiply(15)
+const l2 = getWeights(2, 2)
+
+const l1_o = x.dot(l1.T)
+
+console.log('L1', l1.tolist())
+console.log('L1 out', l1_o.tolist())
+
+const l1_o_relu = relu(l1_o)
+
+console.log('L1 out relu', l1_o_relu.tolist())
+
+const l2_o = l1_o_relu.dot(l2)
+
+console.log('L2', l2.tolist())
+console.log('L2 out', l2_o.tolist())
+
+const loss = MSE(l2_o, y)
+
+console.log('loss', loss)
+
+// backward
+console.log('---------------')
+
+const l2_o_grad = SE_dx(l2_o, y)
+
+console.log('l2 grad', l2_o_grad.tolist())
+
+const l1_o_relu_grad = l2_o_grad.dot(l1.T)
+
+console.log('l1 relu grad', l1_o_relu_grad.tolist())
+
+const l1_o_grad = l1_o_relu_grad.dot(l1.T)
+
+console.log('l1 grad', l1_o_grad.tolist())
+
+
+/*
 class Linear {
   weights = []
 
@@ -141,4 +222,4 @@ for (let i = 0; i < EPOCHS; i++) {
   console.log('---------------')
 
 }
-
+*/
