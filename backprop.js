@@ -44,11 +44,13 @@ const getWeights = (inN, outN) => {
 }
 
 const SE = (x, y) => {
+  console.log('SE x SHAPE', x.shape)
+  console.log('SE y SHAPE', y.shape)
   return (y.subtract(x).pow(2))
 }
 
 const SE_dx = (x, y) => {
-  return (x.multiply(2).subtract((y.multiply(2))))
+  return (x.multiply(1).subtract((y.multiply(1))))
 }
 
 const MSE = squared_error => {
@@ -77,19 +79,26 @@ const lr = 0.01
 const losses = []
 
 for (let i = 0; i < EPOCHS; i++) {
-  const x = nj.array([0.3, 0.5])
-  const y = nj.array([1, 0])
+  let x = nj.array([0.3, 0.5])
+  let y = nj.array([1, 0])
 
   console.log('data', x.tolist())
   console.log('labels', y.tolist())
 
   // forward
 
+  // x = x.reshape(1, x.shape[0])
+  // y = y.reshape(1, y.shape[0])
+  console.log('l1 SHAPE', l1.shape)
+  console.log('x SHAPE', x.shape)
   const l1_o = x.dot(l1.T)
+  console.log('L1 OUT SHAPE', l1_o.shape)
   // const l1_o_relu = relu(l1_o)
   // const l2_o = l1_o_relu.dot(l2.T)
   const l2_o = l1_o.dot(l2.T)
+  console.log('L2 OUT SHAPE', l2_o.shape)
   const se = SE(l2_o, y)
+  console.log('SE', se)
   const loss = MSE(se)
 
   losses.push(loss)
@@ -106,20 +115,33 @@ for (let i = 0; i < EPOCHS; i++) {
 
   // const l2_o_loss_grad = SE_dx(l2_o, y)
   
-  const l2_o_grad_m = MSE_dx(l2_o, y, l1_o)
-  const l1_o_grad_m = MSE_dx(l2_o, y, x.dot(l2.T))
+  console.log('S l2_o', l2_o.shape)
+  // console.log('S l1_o', l1_o.shape)
+  const l2_o_grad = SE_dx(l2_o, y, l1_o)
+  console.log('L2 init grad', l2_o_grad)
 
-  const l2_o_grad = l2.multiply(l2_o_grad_m)
-  const l1_o_grad = l1.multiply(l1_o_grad_m)
+  const wtf1 = l2_o_grad.reshape(1, 2)
+  console.log('WTF1', wtf1)
+  const wtf2 = l1_o.reshape(2, 1)
+  console.log('WTF2', wtf2)
+  console.log('WTF3', wtf2.dot(wtf1))
 
+  // const l1_o_grad = SE_dx(l2_o, y, x.dot(l2.T))
+
+  console.log('l2', l2.tolist())
+  // console.log('l1', l1.tolist())
+  console.log('l2 shape', l2.shape)
+  // console.log('l1 shape', l1.shape)
   console.log('l2 grad', l2_o_grad.tolist())
-  console.log('l1 grad', l1_o_grad.tolist())
+  // console.log('l1 grad', l1_o_grad.tolist())
+  console.log('l2 grad shape', l2_o_grad.shape)
+  // console.log('l1 grad shape', l1_o_grad.shape)
   // console.log('l1 relu grad', l1_o_relu_grad.tolist())
 
   // sgd
   console.log('+++++++++++++++')
 
-  l1 = l1.subtract(l1_o_grad.multiply(lr))
+  // l1 = l1.subtract(l1_o_grad.multiply(lr))
   l2 = l2.subtract(l2_o_grad.multiply(lr))
 }
 
