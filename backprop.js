@@ -102,25 +102,3 @@ for (let i = 0; i < EPOCHS; i++) {
 
 console.log(losses)
 console.log(losses[losses.length-1])
-
-
-
-
-
-// ****** TRASH GOES HERE ******
-/*
-// l1w = 0.6279
-// l2w = 0.7310
-// l1o = 0.1884 -> 0.6279 * 0.3
-// l2o = 0.1377
-
-// l1w = 0.7310
-// l2w = 0.6279
-// l1o = 0.2193
-// l2o = 0.1377
-
-const test_dx_l2 = MSE_dx(nj.array([0.1377]), nj.array([1]), nj.array([0.1884]))
-console.log('TEST dx L2', test_dx_l2)
-const test_dx_l1 = MSE_dx(nj.array([0.1337]), nj.array([1]), nj.array([0.2193]))
-console.log('TEST dx L1', test_dx_l1)
-*/
