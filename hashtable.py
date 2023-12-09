@@ -63,6 +63,8 @@ ht.add('foo', 'bar')
 ht.add('TEST', 'HUI')
 
 assert ht.get('foo') == 'bar'
+ht.add('foo', 'QWE')
+assert ht.get('foo') == 'QWE'
 assert ht.get('qwe') is None
 assert ht.get('TEST') == 'HUI'
 assert ht.get('TESTZ') is None
