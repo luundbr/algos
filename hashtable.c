@@ -77,10 +77,8 @@ char* get(char* key) {
   int h = getHash(key);
   int idx = h % arraySize;
 
-  for (int i = 0; i < arraySize; i++) {
-    if (hashes[i] == h) {
-      return values[i];
-    }
+  if (hashes[idx] == h) {
+    return values[idx];
   }
 
   return NULL;
