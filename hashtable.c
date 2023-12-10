@@ -26,15 +26,16 @@ int getHash(char* data) {
 
 void init(int size) {
   hashes = (int*) malloc(size * sizeof(int));
-  values = (char**) malloc(size * sizeof(char *));
+  values = (char**) malloc(size * sizeof(char *)); // arrayPtr -> stringPtr1, stringPtr2, ...
 
-  for (int i = 0; i < size; i++) {
+  for (int i = 0; i < size; i++) { // set the init keys/values all to -1
     hashes[i] = -1;
-    values[i] = (char*) malloc(VAL_SIZE * sizeof(char));
+    values[i] = (char*) malloc(VAL_SIZE * sizeof(char)); // space for the string pointers
 
-    for (int j = 0; j < VAL_SIZE; j++) {
+    for (int j = 0; j < VAL_SIZE; j++) { // set the strings to -1
       values[i][j] = -1;
     }
+
     arraySize++;
   }
 }
@@ -45,28 +46,33 @@ void add(char* key, char* value) {
 
   int existingId = hashes[idx];
 
-  if (existingId > 0) {
+  if (existingId > 0) { // this key is already stored
     char* str = (char*) malloc(VAL_SIZE * sizeof(char));
     memcpy(str, value, VAL_SIZE);
     free(values[idx]);
     values[idx] = str;
-  } else {
-    if (idx >= arraySize) {
+  } else { // it's new
+    if (idx >= arraySize) { // index points beyond the allocated array
+      // add one element
       hashes = (int*) realloc(hashes, (arraySize + 1) * sizeof(int));
       values = (char**) realloc(values, (arraySize + 1) * sizeof(char*));
 
+      // the new element is a string that needs to be allocated itself
       values[arraySize] = (char*) malloc(VAL_SIZE * sizeof(char));
 
       hashes[arraySize] = h;
 
+      // set the new string
       memcpy(values[arraySize], value, VAL_SIZE);
 
       arraySize++;  
-    } else {
+    } else { // index points inside the array
       hashes[idx] = h;
 
+      // allocate and set the new string
       char* str = (char*) malloc(VAL_SIZE * sizeof(char));
       memcpy(str, value, VAL_SIZE);
+      // delete the old string
       free(values[idx]);
       values[idx] = str;
     }
